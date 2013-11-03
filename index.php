@@ -26,11 +26,12 @@ require_once '../../../config.php';
 require_once $CFG->libdir.'/gradelib.php';
 require_once $CFG->dirroot.'/grade/lib.php';
 require_once $CFG->dirroot.'/grade/report/user/lib.php';
+require_once $CFG->dirroot.'/grade/report/laeuser/lib.php';
 
 $courseid = required_param('id', PARAM_INT);
 $userid   = optional_param('userid', $USER->id, PARAM_INT);
 
-$PAGE->set_url(new moodle_url('/grade/report/user/index.php', array('id'=>$courseid)));
+$PAGE->set_url(new moodle_url('/grade/report/laeuser/index.php', array('id'=>$courseid)));
 
 /// basic access checks
 if (!$course = $DB->get_record('course', array('id' => $courseid))) {
@@ -40,7 +41,7 @@ require_login($course);
 $PAGE->set_pagelayout('report');
 
 $context = context_course::instance($course->id);
-require_capability('gradereport/user:view', $context);
+require_capability('gradereport/laeuser:view', $context);
 
 if (empty($userid)) {
     require_capability('moodle/grade:viewall', $context);
@@ -71,13 +72,13 @@ if (!$access) {
 }
 
 /// return tracking object
-$gpr = new grade_plugin_return(array('type'=>'report', 'plugin'=>'user', 'courseid'=>$courseid, 'userid'=>$userid));
+$gpr = new grade_plugin_return(array('type'=>'report', 'plugin'=>'laeuser', 'courseid'=>$courseid, 'userid'=>$userid));
 
 /// last selected report session tracking
 if (!isset($USER->grade_last_report)) {
     $USER->grade_last_report = array();
 }
-$USER->grade_last_report[$course->id] = 'user';
+$USER->grade_last_report[$course->id] = 'laeuser';
 
 
 //first make sure we have proper final grades - this must be done before constructing of the grade tree
@@ -109,20 +110,20 @@ if (has_capability('moodle/grade:viewall', $context)) { //Teachers will see all 
         $gui->require_active_enrolment($showonlyactiveenrol);
         $gui->init();
         // Add tabs
-        print_grade_page_head($courseid, 'report', 'user');
+        print_grade_page_head($courseid, 'report', 'laeuser');
         groups_print_course_menu($course, $gpr->get_return_url('index.php?id='.$courseid, array('userid'=>0)));
 
         if ($user_selector) {
-            $renderer = $PAGE->get_renderer('gradereport_user');
-            echo $renderer->graded_users_selector('user', $course, $userid, $currentgroup, true);
+            $renderer = $PAGE->get_renderer('gradereport_laeuser');
+            echo $renderer->graded_users_selector('laeuser', $course, $userid, $currentgroup, true);
         }
 
         while ($userdata = $gui->next_user()) {
             $user = $userdata->user;
-            $report = new grade_report_user($courseid, $gpr, $context, $user->id);
+            $report = new grade_report_laeuser($courseid, $gpr, $context, $user->id);
 
-            $studentnamelink = html_writer::link(new moodle_url('/user/view.php', array('id' => $report->user->id, 'course' => $courseid)), fullname($report->user));
-            echo $OUTPUT->heading(get_string('pluginname', 'gradereport_user') . ' - ' . $studentnamelink);
+            $studentnamelink = html_writer::link(new moodle_url('/laeuser/view.php', array('id' => $report->user->id, 'course' => $courseid)), fullname($report->user));
+            echo $OUTPUT->heading(get_string('pluginname', 'gradereport_laeuser') . ' - ' . $studentnamelink);
 
             if ($report->fill_table()) {
                 echo '<br />'.$report->print_table(true);
@@ -130,17 +131,17 @@ if (has_capability('moodle/grade:viewall', $context)) { //Teachers will see all 
             echo "<p style = 'page-break-after: always;'></p>";
         }
         $gui->close();
-    } else { // Only show one user's report
-        $report = new grade_report_user($courseid, $gpr, $context, $userid);
+    } else { // Only show one laeuser's report
+        $report = new grade_report_laeuser($courseid, $gpr, $context, $userid);
 
-        $studentnamelink = html_writer::link(new moodle_url('/user/view.php', array('id' => $report->user->id, 'course' => $courseid)), fullname($report->user));
-        print_grade_page_head($courseid, 'report', 'user', get_string('pluginname', 'gradereport_user') . ' - ' . $studentnamelink);
+        $studentnamelink = html_writer::link(new moodle_url('/laeuser/view.php', array('id' => $report->user->id, 'course' => $courseid)), fullname($report->user));
+        print_grade_page_head($courseid, 'report', 'laeuser', get_string('pluginname', 'gradereport_laeuser') . ' - ' . $studentnamelink);
         groups_print_course_menu($course, $gpr->get_return_url('index.php?id='.$courseid, array('userid'=>0)));
 
         if ($user_selector) {
-            $renderer = $PAGE->get_renderer('gradereport_user');
+            $renderer = $PAGE->get_renderer('gradereport_laeuser');
             $showallusersoptions = true;
-            echo $renderer->graded_users_selector('user', $course, $userid, $currentgroup, $showallusersoptions);
+            echo $renderer->graded_users_selector('laeuser', $course, $userid, $currentgroup, $showallusersoptions);
         }
 
         if ($currentgroup and !groups_is_member($currentgroup, $userid)) {
@@ -154,10 +155,10 @@ if (has_capability('moodle/grade:viewall', $context)) { //Teachers will see all 
 } else { //Students will see just their own report
 
     // Create a report instance
-    $report = new grade_report_user($courseid, $gpr, $context, $userid);
+    $report = new grade_report_laeuser($courseid, $gpr, $context, $userid);
 
     // print the page
-    print_grade_page_head($courseid, 'report', 'user', get_string('pluginname', 'gradereport_user'). ' - '.fullname($report->user));
+    print_grade_page_head($courseid, 'report', 'laeuser', get_string('pluginname', 'gradereport_laeuser'). ' - '.fullname($report->user));
 
     if ($report->fill_table()) {
         echo '<br />'.$report->print_table(true);

@@ -17,8 +17,8 @@
 /**
  * Defines capabilities for the user report
  *
- * @package   gradereport_user
- * @copyright 2007 onwards Martin Dougiamas (http://dougiamas.com)
+ * @package   gradereport_laeuser
+ * @copyright 2007 onwards bob puffer 
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $capabilities = array(
 
-    'gradereport/user:view' => array(
+    'gradereport/laeuser:view' => array(
         'riskbitmask' => RISK_PERSONAL,
         'captype' => 'read',
         'contextlevel' => CONTEXT_COURSE,

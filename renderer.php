@@ -17,7 +17,7 @@
 /**
  * Renderer for the grade user report
  *
- * @package   gradereport_user
+ * @package   gradereport_laeuser
  * @copyright 2010 Sam Hemelryk
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -31,7 +31,7 @@
  * @copyright 2010 Sam Hemelryk
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class gradereport_user_renderer extends plugin_renderer_base {
+class gradereport_laeuser_renderer extends plugin_renderer_base {
 
     public function graded_users_selector($report, $course, $userid, $groupid, $includeall) {
         global $USER;
