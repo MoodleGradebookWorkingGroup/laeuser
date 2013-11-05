@@ -17,8 +17,8 @@
 /**
  * The gradebook user report
  *
- * @package   gradereport_user
- * @copyright 2007 Moodle Pty Ltd (http://moodle.com)
+ * @package   gradereport_laeuser
+ * @copyright 2013 Bob Puffer
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
