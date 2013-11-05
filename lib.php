@@ -496,17 +496,7 @@ class grade_report_laeuser extends grade_report {
                         $grade_values = $this->gtree->parents[$itemid]->cat_item; // earned points
                         // $grade_values never gets created if $this->accuratetotals isn't on
                         if (sizeof($grade_values) !== 0) { // CATEGORY or COURSE item with values accumulated from its children
-							$gradeval = $this->gtree->accuratepointsfinalvalues($itemid, $item, $type, $parent_id, $gradeval, GRADE_DISPLAY_TYPE_REAL);
-/*
-							$tempmax = $grade->grade_item->grademax;
-                            $grade->grade_item->grademax = array_sum($grade_maxes); // real EARNABLE points total
-
-                            // array($grade_values) is real EARNED total
-                            $data['grade']['content'] = grade_format_gradevalue(array_sum($grade_values), $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
-                            $grade->grade_item->grademax = $tempmax;
-*/
-//                        } else { // grade ITEM
-                            // store grade to containing category or course
+							$gradeval = $this->gtree->accuratepointsfinalvalues($itemid, $grade->grade_item, $type, $parent_id, $gradeval, GRADE_DISPLAY_TYPE_REAL);
                         }
                     	$data['grade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
                     }
@@ -519,15 +509,15 @@ class grade_report_laeuser extends grade_report {
                 	// include for limit rules, if needed
                 	$data['range']['class'] = $class;
                     // if a category or course item
-                   	$tempmax = $grade->grade_item->grademax;
+//                   	$tempmax = $grade->grade_item->grademax;
 
                    	// if we're using accuratetotals and this is a category or course then $grade_maxes will have values
-                   	if ($this->accuratetotals && ($type == 'categoryitem' or $type == 'courseitem')) {
-                   		$grade->grade_item->grademax = isset($grade_maxes) ? array_sum($grade_maxes) : $grade_object->max_earnable;
-                   	}
+//                   	if ($this->accuratetotals && ($type == 'categoryitem' or $type == 'courseitem')) {
+//                   		$grade->grade_item->grademax = isset($grade_maxes) ? array_sum($grade_maxes) : $grade->grade_item->grade_max;
+//                   	}
                     $data['range']['class'] = $class;
                     $data['range']['content'] = $grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL, $this->rangedecimals);
-                    $grade->grade_item->grademax = $tempmax;
+//                    $grade->grade_item->grademax = $tempmax;
                     $data['range']['headers'] = "$header_cat $header_row range";
                 }
 
