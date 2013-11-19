@@ -25,7 +25,6 @@
 require_once($CFG->dirroot . '/grade/report/lib.php');
 require_once $CFG->dirroot.'/grade/report/laegrader/locallib.php';
 require_once($CFG->libdir.'/tablelib.php');
-require_once($CFG->dirroot . '/grade/report/user/lib.php');
 
 //showhiddenitems values
 define("GRADE_REPORT_LAEUSER_HIDE_HIDDEN", 0);
@@ -214,7 +213,7 @@ class grade_report_laeuser extends grade_report {
         for ($i = 1; $i <= $this->maxdepth; $i++) {
             $this->evenodd[$i] = 0;
         }
-
+        
         $this->tabledata = array();
 
         $this->canviewhidden = has_capability('moodle/grade:viewhidden', context_course::instance($this->courseid));
@@ -333,7 +332,6 @@ class grade_report_laeuser extends grade_report {
         $element['userid'] = $this->user->id;
         $itemname = $element['object']->get_name();
         $fullname = $this->gtree->get_element_header($element, true, true, true, null, $itemname);
-        $fullname = str_replace('CATEGORY','',str_replace('<br />',' ', $fullname));  // trim out the less desirable elements from the LAE Grader report creation
         $data = array();
         $hidden = '';
         $excluded = '';
@@ -663,14 +661,15 @@ class grade_report_laeuser extends grade_report {
      * @return string
      */
     public function print_table($return=false) {
-         $maxspan = $this->maxdepth;
+        global $CFG; 
+    	$maxspan = $this->maxdepth;
 
         /// Build table structure
         $html = "
             <table cellspacing='0'
                    cellpadding='0'
                    summary='" . s($this->get_lang_string('tablesummary', 'gradereport_laeuser')) . "'
-                   class='boxaligncenter generaltable user-grade'>
+                   class='boxaligncenter generaltable laeuser-grade'>
             <thead>
                 <tr>
                     <th id='".$this->tablecolumns[0]."' class=\"header\" colspan='$maxspan'>".$this->tableheaders[0]."</th>\n";
@@ -1006,12 +1005,12 @@ function grade_report_laeuser_profilereport($course, $user) {
         grade_regrade_final_grades($course->id);
 
         /// return tracking object
-        $gpr = new grade_plugin_return(array('type'=>'report', 'plugin'=>'user', 'courseid'=>$course->id, 'userid'=>$user->id));
+        $gpr = new grade_plugin_return(array('type'=>'report', 'plugin'=>'laeuser', 'courseid'=>$course->id, 'userid'=>$user->id));
         // Create a report instance
         $report = new grade_report_laeuser($course->id, $gpr, $context, $user->id);
 
         // print the page
-        echo '<div class="grade-report-user">'; // css fix to share styles with real report page
+        echo '<div class="grade-report-laeuser">'; // css fix to share styles with real report page
         echo $OUTPUT->heading(get_string('pluginname', 'gradereport_laeuser'). ' - '.fullname($report->user));
 
         if ($report->fill_table()) {
