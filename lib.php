@@ -504,18 +504,8 @@ class grade_report_laeuser extends grade_report {
 
                 // Range
                 if ($this->showrange) {
-                	// include for limit rules, if needed
-                	$data['range']['class'] = $class;
-                    // if a category or course item
-//                   	$tempmax = $grade->grade_item->grademax;
-
-                   	// if we're using accuratetotals and this is a category or course then $grade_maxes will have values
-//                   	if ($this->accuratetotals && ($type == 'categoryitem' or $type == 'courseitem')) {
-//                   		$grade->grade_item->grademax = isset($grade_maxes) ? array_sum($grade_maxes) : $grade->grade_item->grade_max;
-//                   	}
                     $data['range']['class'] = $class;
                     $data['range']['content'] = $grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL, $this->rangedecimals);
-//                    $grade->grade_item->grademax = $tempmax;
                     $data['range']['headers'] = "$header_cat $header_row range";
                 }
 
