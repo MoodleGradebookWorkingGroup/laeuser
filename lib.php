@@ -30,6 +30,7 @@ require_once($CFG->libdir.'/tablelib.php');
 define("GRADE_REPORT_LAEUSER_HIDE_HIDDEN", 0);
 define("GRADE_REPORT_LAEUSER_HIDE_UNTIL", 1);
 define("GRADE_REPORT_LAEUSER_SHOW_HIDDEN", 2);
+define("GRADE_REPORT_LAEUSER_FINAL_GRADE_ONLY", 2);
 
 /**
  * Class providing an API for the user report building and displaying.
@@ -178,7 +179,7 @@ class grade_report_laeuser extends grade_report {
         $this->showlettergrade = grade_get_setting($this->courseid, 'report_laeuser_showlettergrade', !empty($CFG->grade_report_laeuser_showlettergrade));
         $this->showaverage     = grade_get_setting($this->courseid, 'report_laeuser_showaverage',     !empty($CFG->grade_report_laeuser_showaverage));
         $this->accuratetotals		= ($temp = grade_get_setting($this->courseid, 'report_laegrader_accuratetotals', $CFG->grade_report_laegrader_accuratetotals)) ? $temp : 0;
-
+        
         // The default grade decimals is 2
         $defaultdecimals = 2;
         if (property_exists($CFG, 'grade_decimalpoints')) {
@@ -315,7 +316,13 @@ class grade_report_laeuser extends grade_report {
     function fill_table() {
         //print "<pre>";
         //print_r($this->gtree->top_element);
-        $this->fill_table_recursive($this->gtree->top_element);
+	   	$this->gtree->calc_weights_recursive($this->gtree->top_element);
+    	if (isset($this->target_letter)) {
+	    	$this->grade_calculate_targets($this->target_letter);
+    	} else {
+	    	$this->grade_calculate_targets(); // don't pass a param so extent of target grades can be calced
+    	}
+    	$this->fill_table_recursive($this->gtree->top_element);
         //print_r($this->tabledata);
         //print "</pre>";
         return true;
@@ -533,8 +540,10 @@ class grade_report_laeuser extends grade_report {
                 // adjust gradeval in case of percentage or letter display
                 if ($this->accuratetotals && ($type == 'categoryitem' || $type == 'courseitem') && ! $grade->is_hidden()) {
                     if ($type == 'categoryitem') {
-	                    $gradeval = $this->gtree->parents[$parent_id]->pctg[$itemid];
-					} else {
+                    	$gradeval = $this->gtree->parents[$parent_id]->pctg[$itemid];
+                    } else if (!isset($this->gtree->parents[$itemid]->coursepctg)) {
+                    	$gradeval = 0;
+                    } else {
 						$gradeval = $this->gtree->parents[$itemid]->coursepctg;
 					}
 					$grade->grade_item->grademax = 1;
@@ -570,11 +579,11 @@ class grade_report_laeuser extends grade_report {
                         } else {
                             $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
                         }
-                    } else if (isset($gradeval)) {
+                    } else if ($this->showlettergrade == GRADE_REPORT_LAEUSER_FINAL_GRADE_ONLY && $type !== 'courseitem') {
                         $data['lettergrade']['class'] = $class;
-                    	$data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
+                            $data['lettergrade']['content'] = '-';
                     } else {
-                        $data['lettergrade']['content'] = '-';
+                        $data['lettergrade']['class'] = $class;
                         $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
                     }
                     $data['lettergrade']['headers'] = "$header_cat $header_row lettergrade";
@@ -1003,14 +1012,6 @@ function grade_report_laeuser_settings_definition(&$mform) {
     $mform->addElement('select', 'report_laeuser_showaverage', get_string('showaverage', 'grades'), $options);
     $mform->addHelpButton('report_laeuser_showaverage', 'showaverage', 'grades');
 
-    if (empty($CFG->grade_report_laeuser_showlettergrade)) {
-        $options[-1] = get_string('defaultprev', 'grades', $options[0]);
-    } else {
-        $options[-1] = get_string('defaultprev', 'grades', $options[1]);
-    }
-
-    $mform->addElement('select', 'report_laeuser_showlettergrade', get_string('showlettergrade', 'grades'), $options);
-
     if (empty($CFG->grade_report_laeuser_showrange)) {
         $options[-1] = get_string('defaultprev', 'grades', $options[0]);
     } else {
@@ -1018,6 +1019,19 @@ function grade_report_laeuser_settings_definition(&$mform) {
     }
 
     $mform->addElement('select', 'report_laeuser_showrange', get_string('showrange', 'grades'), $options);
+
+    $options = array(-1 => get_string('default', 'grades'),
+                      0 => get_string('hide'),
+                      1 => get_string('show'),
+                      2 => get_string('finalgradeonly', 'gradereport_laeuser'));
+    
+    if (empty($CFG->grade_report_laeuser_showlettergrade)) {
+        $options[-1] = get_string('defaultprev', 'grades', $options[0]);
+    } else {
+        $options[-1] = get_string('defaultprev', 'grades', $options[1]);
+    }
+
+    $mform->addElement('select', 'report_laeuser_showlettergrade', get_string('showlettergrade', 'grades'), $options);
 
     $options = array(0=>0, 1=>1, 2=>2, 3=>3, 4=>4, 5=>5);
     if (! empty($CFG->grade_report_laeuser_rangedecimals)) {

@@ -23,5 +23,6 @@
  */
 
 $string['pluginname'] = 'LAE User report';
+$string['finalgradeonly'] = 'Final grade only';
 $string['laeuser:view'] = 'View your own grade report';
 $string['tablesummary'] = 'The table is arranged as a list of graded items including categories of graded items. When items are in a category they will be indicated as such.';
