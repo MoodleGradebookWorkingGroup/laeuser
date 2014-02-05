@@ -42,5 +42,26 @@ class gradereport_laeuser_renderer extends plugin_renderer_base {
 
         return $output;
     }
+    
+    public function target_grades_selector($report, $course, $userid, $context, $maxpercentage, $target_letter) {
+        global $USER;
 
+       	if (!$target_letter > 0) {
+       		$target_letter = null;
+       	}
+        $letters = grade_get_letters($context);
+       	
+       	// cycle through letters and remove any that are greater than maxpercentage
+       	foreach ($letters as $key => $value) {
+       		if ($key > $maxpercentage) {
+       			unset($letters[$key]);
+       		}
+       	}
+    	$select = new single_select(new moodle_url('/grade/report/laeuser/index.php', array('id'=>$course->id)), 'target_letter', $letters, $target_letter, array('' => 'No Target'));
+       	$output = html_writer::tag('div', 'Your desired grade... ' . $this->output->render($select) . '  WARNING: The grades listed here may not be the only graded items for this course', array('id'=>'target_grades_selector', 'class' => 'warning'));
+       	$output .= html_writer::tag('p', '', array('style'=>'page-break-after: always;'));
+
+        return $output;
+    }
+    
 }
