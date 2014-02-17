@@ -31,3 +31,5 @@ $string['laeuser:view'] = 'View your own grade report';
 $string['showcontrib'] = 'Show contribution column';
 $string['showcontrib_help'] = 'Show the contribution column? Students will more easily be able to discern how their final grade was computed';
 $string['tablesummary'] = 'The table is arranged as a list of graded items including categories of graded items. When items are in a category they will be indicated as such.';
+$string['weightuc'] = 'Calculated weight';
+

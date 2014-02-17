@@ -181,6 +181,8 @@ class grade_report_laeuser extends grade_report {
         $this->accuratetotals		= ($temp = grade_get_setting($this->courseid, 'report_laegrader_accuratetotals', $CFG->grade_report_laegrader_accuratetotals)) ? $temp : 0;
         $this->showcontrib     = grade_get_setting($this->courseid, 'report_laeuser_showcontrib',     !empty($CFG->grade_report_laeuser_showcontrib));
         $this->emptygrades = array();
+	   	$this->grades = array();
+        
         
         // The default grade decimals is 2
         $defaultdecimals = 2;
@@ -278,7 +280,7 @@ class grade_report_laeuser extends grade_report {
 
         if ($this->showweight) {
             $this->tablecolumns[] = 'weight';
-            $this->tableheaders[] = $this->get_lang_string('weightuc', 'grades');
+            $this->tableheaders[] = $this->get_lang_string('weightuc', 'gradereport_laeuser');
         }
 
         if ($this->showgrade) {
@@ -323,9 +325,12 @@ class grade_report_laeuser extends grade_report {
     }
 
     function fill_table() {
+        global $DB, $COURSE;
         //print "<pre>";
         //print_r($this->gtree->top_element);
-	   	$this->gtree->calc_weights_recursive($this->gtree->top_element);
+        $userid = $this->user->id;
+    	$this->grades = $DB->get_records('grade_grades', array('userid' => $userid), null, 'itemid, finalgrade');
+       	$this->gtree->calc_weights_recursive($this->gtree->top_element, $this->grades);
     	if (isset($this->target_letter)) {
 	    	$this->grade_calculate_targets($this->target_letter);
     	} else {
@@ -446,11 +451,14 @@ class grade_report_laeuser extends grade_report {
 
                 /// Name
                 $data['itemname']['content'] = $fullname;
-                $data['itemname']['class'] = $class;
+	        	$data['itemname']['class'] = $class;
                 $data['itemname']['colspan'] = ($this->maxdepth - $depth);
                 $data['itemname']['celltype'] = 'th';
                 $data['itemname']['id'] = $header_row;
-
+	        	if ($item->aggregationcoef > 0 && $this->gtree->parents[$item->id]->parent_agg != GRADE_AGGREGATE_WEIGHTED_MEAN2) {
+					$data['itemname']['content'] .= ' (Input weight = ' . format_float($item->aggregationcoef,2) . '%)';
+	        	}
+                
                 /// Actual Grade
                 $gradeval = $grade->finalgrade;
 
@@ -557,7 +565,7 @@ class grade_report_laeuser extends grade_report {
                 // adjust gradeval in case of percentage or letter display
                 if ($this->accuratetotals && ($type == 'categoryitem' || $type == 'courseitem') && ! $grade->is_hidden()) {
                     if ($type == 'categoryitem') {
-                    	$gradeval = $this->gtree->parents[$parent_id]->pctg[$itemid];
+                    	$gradeval =  isset($this->gtree->parents[$parent_id]->pctg[$itemid]) ? $this->gtree->parents[$parent_id]->pctg[$itemid] : null;
                     } else if (!isset($this->gtree->parents[$itemid]->coursepctg)) {
                     	$gradeval = 0;
                     } else {
@@ -940,7 +948,7 @@ class grade_report_laeuser extends grade_report {
             }
         }
     }
-
+    
     /*
      * TODO: take into account hidden grades and setting of show totals excluding hidden items
      * TODO: what are we going to do with categories and course total?
