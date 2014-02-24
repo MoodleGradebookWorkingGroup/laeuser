@@ -18,7 +18,7 @@
  * Definition of the grade_laeuser_report class is defined
  *
  * @package gradereport_laeuser
- * @copyright 2007 Nicolas Connault
+ * @copyright 2013 Bob Puffer http://www.clamp-it.org
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
@@ -329,13 +329,18 @@ class grade_report_laeuser extends grade_report {
         //print "<pre>";
         //print_r($this->gtree->top_element);
         $userid = $this->user->id;
-    	$this->grades = $DB->get_records('grade_grades', array('userid' => $userid), null, 'itemid, finalgrade');
-       	$this->gtree->calc_weights_recursive($this->gtree->top_element, $this->grades);
+		$this->load_final_grades($userid);
+    	$this->gtree->calc_weights_recursive($this->gtree->top_element, $this->grades);
     	if (isset($this->target_letter)) {
 	    	$this->grade_calculate_targets($this->target_letter);
+            
+	    	// calc all visible grades in order to meet target
+			$this->gtree->accuratepointsprelimcalculation($this->grades, true);
     	} else {
 	    	$this->grade_calculate_targets(); // don't pass a param so extent of target grades can be calced
+    		$this->gtree->accuratepointsprelimcalculation($this->grades);
     	}
+
     	$this->fill_table_recursive($this->gtree->top_element);
         //print_r($this->tabledata);
         //print "</pre>";
@@ -371,7 +376,7 @@ class grade_report_laeuser extends grade_report {
 			if (!isset($this->gtree->parents[$itemid])) {
 				$this->gtree->parents[$itemid] = new stdClass;
 			}
-			$this->gtree->parents[$itemid]->excredit = 0;
+//			$this->gtree->parents[$itemid]->excredit = 0;
 		} 
         
         // If this is a hidden grade category, hide it completely from the user
@@ -391,13 +396,7 @@ class grade_report_laeuser extends grade_report {
             $header_row = "row_{$eid}_{$this->user->id}";
             $header_cat = "cat_{$grade_object->categoryid}_{$this->user->id}";
 
-            if (! $grade = grade_grade::fetch(array('itemid'=>$grade_object->id,'userid'=>$this->user->id))) {
-                $grade = new grade_grade();
-                $grade->userid = $this->user->id;
-                $grade->itemid = $grade_object->id;
-            }
-
-            $grade->load_grade_item();
+			$grade = $this->grades[$itemid];
 
             /// Hidden Items
             if ($grade->grade_item->is_hidden()) {
@@ -494,24 +493,6 @@ class grade_report_laeuser extends grade_report {
                    	$targetcalcs = true; // switch for everything being treated as a calculated target grade
                 }	
                 
-                /**** ACCURATE TOTALS CALCULATIONS *****/
-                // determine if we should calculate up for accuratetotals
-                if ($grade->is_hidden() && $showtotalsifcontainhidden !== GRADE_REPORT_SHOW_REAL_TOTAL_IF_CONTAINS_HIDDEN) {
-                    // do nothing
-//                } else if ($gradeval == null) {  // TODO: allow for teachers and admins to see the ranges, cascade down to last choice
-//                    // do nothing
-            	} else if (!isset($this->gtree->parents[$itemid])) {
-                    // do nothing
-            	} else if (!isset($parent_id) && $type !== 'courseitem') {
-                    // do nothing
-            	} else if ($targetcalcs) { // TODO: what if not accuratetotals
-            		// calc all visible grades in order to meet target
-					$this->gtree->accuratepointsprelimcalculation($itemid, $type, $grade, true);
-               	} else if ($accuratetotals) {
-	    			// the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
-					$this->gtree->accuratepointsprelimcalculation($itemid, $type, $grade);
-                }
-                
                 if ($this->showgrade) { // display only of points grade
                 	if ($grade->grade_item->needsupdate) {
                         $data['grade']['class'] = $class.' gradingerror';
@@ -530,24 +511,27 @@ class grade_report_laeuser extends grade_report {
 						$grade_values = $this->gtree->parents[$itemid]->cat_item; // earned points
                         // $grade_values never gets created if $this->accuratetotals isn't on
                         if (sizeof($grade_values) !== 0) { // CATEGORY or COURSE item with values accumulated from its children
-							$gradeval = $this->gtree->accuratepointsfinalvalues($itemid, $grade->grade_item, $type, $parent_id, $gradeval, GRADE_DISPLAY_TYPE_REAL);
+							$gradeval = $this->gtree->accuratepointsfinalvalues($this->grades, $itemid, $grade->grade_item, $type, $parent_id, GRADE_DISPLAY_TYPE_REAL);
                         }
                     	$data['grade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
                     } else if ($targetcalcs) {
                         $data['grade']['class'] = $class;
                     	$gradeval = $item->target;
                         $data['grade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
-                    } else if (!isset($this->gtree->parents[$itemid]->cat_item)) { // CATEGORY or COURSE item with values accumulated from its children
+                    } else if($type === 'item') {
+                        $data['grade']['class'] = $class;
+                    	$data['grade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
+                    } else if (!isset($this->grades[$itemid]->cat_item)) { // CATEGORY or COURSE item with values accumulated from its children
                         $data['grade']['class'] = $class;
                         $data['grade']['content'] = '-';
                     } else {
                         $data['grade']['class'] = $class;
 				        // this covers the instance where a course item is sent which doesn't have a parent_id
 						$parent_id = !isset($parent_id) ? $itemid: $parent_id;
-						$grade_values = $this->gtree->parents[$itemid]->cat_item; // earned points
+						$grade_values = $this->grades[$itemid]->cat_item; // earned points
                         // $grade_values never gets created if $this->accuratetotals isn't on
                         if (sizeof($grade_values) !== 0) { // CATEGORY or COURSE item with values accumulated from its children
-							$gradeval = $this->gtree->accuratepointsfinalvalues($itemid, $grade->grade_item, $type, $parent_id, $gradeval, GRADE_DISPLAY_TYPE_REAL);
+							$gradeval = $this->gtree->accuratepointsfinalvalues($this->grades, $itemid, $grade->grade_item, $type, $parent_id, GRADE_DISPLAY_TYPE_REAL);
                         }
                     	$data['grade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true,GRADE_DISPLAY_TYPE_REAL);
                     }
@@ -556,20 +540,24 @@ class grade_report_laeuser extends grade_report {
                 /***** ACCURATE TOTALS END *****/
 
                 // Range
-                if ($this->showrange) {
+                if ($this->showrange && (!is_null($gradeval) || $type === 'item')) {
                     $data['range']['class'] = $rangeclass;
                     $data['range']['content'] = $grade->grade_item->get_formatted_range(GRADE_DISPLAY_TYPE_REAL, $this->rangedecimals);
+                    $data['range']['headers'] = "$header_cat $header_row range";
+                } else {
+                    $data['range']['class'] = $rangeclass;
+                    $data['range']['content'] = '-';
                     $data['range']['headers'] = "$header_cat $header_row range";
                 }
 
                 // adjust gradeval in case of percentage or letter display
                 if ($this->accuratetotals && ($type == 'categoryitem' || $type == 'courseitem') && ! $grade->is_hidden()) {
                     if ($type == 'categoryitem') {
-                    	$gradeval =  isset($this->gtree->parents[$parent_id]->pctg[$itemid]) ? $this->gtree->parents[$parent_id]->pctg[$itemid] : null;
-                    } else if (!isset($this->gtree->parents[$itemid]->coursepctg)) {
+                    	$gradeval =  isset($this->grades[$parent_id]->pctg[$itemid]) ? $this->grades[$parent_id]->pctg[$itemid] : null;
+                    } else if (!isset($this->grades[$itemid]->coursepctg)) {
                     	$gradeval = 0;
                     } else {
-						$gradeval = $this->gtree->parents[$itemid]->coursepctg;
+						$gradeval = $this->grades[$itemid]->coursepctg;
 					}
 					$grade->grade_item->grademax = 1;
 				}
@@ -949,6 +937,46 @@ class grade_report_laeuser extends grade_report {
         }
     }
     
+    /**
+     * get all the grades
+     * pulls out all the grades, this does not need to worry about paging
+     */
+    public function load_final_grades($userid) {
+        global $CFG, $DB;
+		$courseid = $this->course->id;
+        
+        if (!empty($this->grades)) {
+            return;
+        }
+
+        // please note that we must fetch all grade_grades fields if we want to construct grade_grade object from it!
+        $sql = "SELECT g.*
+                  FROM {grade_items} gi,
+                       {grade_grades} g
+                 WHERE g.itemid = gi.id 
+                 AND g.userid = $userid
+                 AND gi.courseid = $courseid";
+
+        if ($grades = $DB->get_records_sql($sql)) {
+            foreach ($grades as $graderec) {
+                if (array_key_exists($graderec->itemid, $this->gtree->get_items())) { // some items may not be present!!
+                    $this->grades[$graderec->itemid] = new grade_grade($graderec, false);
+                    $this->grades[$graderec->itemid]->grade_item = $this->gtree->get_item($graderec->itemid); // db caching
+                }
+            }
+        }
+
+        // prefil grades that do not exist yet
+        foreach ($this->gtree->get_items() as $itemid=>$unused) {
+            if (!isset($this->grades[$itemid])) {
+                $this->grades[$itemid] = new grade_grade();
+                $this->grades[$itemid]->itemid = $itemid;
+                $this->grades[$itemid]->userid = $userid;
+                $this->grades[$itemid]->grade_item = $this->gtree->get_item($itemid); // db caching
+            }
+        }
+    }
+
     /*
      * TODO: take into account hidden grades and setting of show totals excluding hidden items
      * TODO: what are we going to do with categories and course total?
