@@ -18,8 +18,8 @@
  * Defines site settings for the user gradebook report
  *
  * @package gradereport_laeuser
- * @copyright 2010 Bob Puffer
- * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+* @copyright 2013 Bob Puffer http://www.clamp-it.org
+* @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die;

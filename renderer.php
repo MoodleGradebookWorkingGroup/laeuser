@@ -18,7 +18,7 @@
  * Renderer for the grade user report
  *
  * @package   gradereport_laeuser
- * @copyright 2010 Sam Hemelryk
+ * @copyright 2013 Bob Puffer http://www.clamp-it.org
  * @license   http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 

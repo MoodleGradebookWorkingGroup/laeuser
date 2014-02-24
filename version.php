@@ -18,14 +18,14 @@
  * Version details for the user gradebook report
  *
  * @package    gradereport_laeuser
- * @copyright  1999 onwards bob puffer
+ * @copyright 2013 Bob Puffer http://www.clamp-it.org
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 defined('MOODLE_INTERNAL') || die();
 
-$plugin->version   = 2014021600;        // The current plugin version (Date: YYYYMMDDXX)
+$plugin->version   = 2014022400;        // The current plugin version (Date: YYYYMMDDXX)
 $plugin->requires  = 2012120300.00;        // Requires this Moodle version
 $plugin->component = 'gradereport_laeuser'; // Full name of the plugin (used for diagnostics)
-$plugin->dependencies = array('gradereport_laegrader' => 2014021600);
+$plugin->dependencies = array('gradereport_laegrader' => 2014022400);
 $plugin->maturity = MATURITY_STABLE;
