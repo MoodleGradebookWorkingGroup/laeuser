@@ -29,7 +29,7 @@ require_once $CFG->dirroot.'/grade/report/laeuser/lib.php';
 
 $courseid = required_param('id', PARAM_INT);
 $userid   = optional_param('userid', $USER->id, PARAM_INT);
-$target_letter = optional_param('target_letter', null, PARAM_INT);
+$target_letter = optional_param('target_letter', null, PARAM_FLOAT);
 
 $PAGE->set_url(new moodle_url('/grade/report/laeuser/index.php', array('id'=>$courseid)));
 
@@ -157,15 +157,16 @@ if (has_capability('moodle/grade:viewall', $context)) { //Teachers will see all 
     // Create a report instance
     $report = new grade_report_laeuser($courseid, $gpr, $context, $userid);
     if ($target_letter) {
+    	$target_letter = format_float($target_letter,5);
     	$report->target_letter = $target_letter;
     }
-    
+
 
     // print the page
     print_grade_page_head($courseid, 'report', 'laeuser', get_string('pluginname', 'gradereport_laeuser'). ' - '.fullname($report->user));
     if ($report->fill_table()) {
         $renderer = $PAGE->get_renderer('gradereport_laeuser');
-    	echo $renderer->target_grades_selector($report, $course, $userid, $context, $report->maxtarget, $target_letter);
+    	echo $renderer->target_grades_selector($report, $course, $userid, $context, $report->gtree->maxtarget, $target_letter);
     	echo '<br />'.$report->print_table(true);
     }
 }

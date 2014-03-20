@@ -182,8 +182,8 @@ class grade_report_laeuser extends grade_report {
         $this->showcontrib     = grade_get_setting($this->courseid, 'report_laeuser_showcontrib',     !empty($CFG->grade_report_laeuser_showcontrib));
         $this->emptygrades = array();
 	   	$this->grades = array();
-        
-        
+
+
         // The default grade decimals is 2
         $defaultdecimals = 2;
         if (property_exists($CFG, 'grade_decimalpoints')) {
@@ -202,6 +202,7 @@ class grade_report_laeuser extends grade_report {
 
         // Grab the grade_tree for this course
         $this->gtree = grade_tree_local_helper($this->courseid, false, $this->switch, null, !$CFG->enableoutcomes,0);
+        $this->gtree->showtotalsifcontainhidden = $this->showtotalsifcontainhidden[$this->courseid];
 
         // Fill items with parent information needed later
         $this->gtree->parents = array();
@@ -211,8 +212,8 @@ class grade_report_laeuser extends grade_report {
     		$this->gtree->parents[$this->gtree->top_element['object']->grade_item->id] = new stdClass(); // initiate the course item
             $this->gtree->fill_parents($this->gtree->top_element, $this->gtree->top_element['object']->grade_item->id, $this->showtotalsifcontainhidden);
         }
-		$this->gtree->calc_weights();
-        
+//		$this->gtree->calc_weights();
+
 		// Determine the number of rows and indentation
         $this->maxdepth = 1;
         $this->inject_rowspans($this->gtree->top_element);
@@ -220,7 +221,7 @@ class grade_report_laeuser extends grade_report {
         for ($i = 1; $i <= $this->maxdepth; $i++) {
             $this->evenodd[$i] = 0;
         }
-        
+
         $this->tabledata = array();
 
         $this->canviewhidden = has_capability('moodle/grade:viewhidden', context_course::instance($this->courseid));
@@ -326,20 +327,15 @@ class grade_report_laeuser extends grade_report {
 
     function fill_table() {
         global $DB, $COURSE;
-        //print "<pre>";
-        //print_r($this->gtree->top_element);
         $userid = $this->user->id;
 		$this->load_final_grades($userid);
-    	$this->gtree->calc_weights_recursive($this->gtree->top_element, $this->grades);
-    	if (isset($this->target_letter)) {
-	    	$this->grade_calculate_targets($this->target_letter);
-            
-	    	// calc all visible grades in order to meet target
-			$this->gtree->accuratepointsprelimcalculation($this->grades, true);
-    	} else {
-	    	$this->grade_calculate_targets(); // don't pass a param so extent of target grades can be calced
-    		$this->gtree->accuratepointsprelimcalculation($this->grades);
-    	}
+        $this->gtree->accuratepointsprelimcalculation($this->grades); // gives us our pctg in case we have drop or keep situations
+//        $this->gtree->grades = $this->grades;
+        if (isset($this->target_letter)) {
+            $this->gtree->calc_weights_recursive($this->gtree->top_element, $this->grades, $this->target_letter);
+		} else {
+            $this->gtree->calc_weights_recursive($this->gtree->top_element, $this->grades);
+		}
 
     	$this->fill_table_recursive($this->gtree->top_element);
         //print_r($this->tabledata);
@@ -366,19 +362,19 @@ class grade_report_laeuser extends grade_report {
         $accuratetotals = $this->accuratetotals;
         $showtotalsifcontainhidden = $this->showtotalsifcontainhidden[$this->courseid];
         $targetclass = ' target ';
-        
+
         // substituting shorthand for long object variables
         $items = $this->gtree->items;
         $item =& $items[$itemid];
-        
+
         // need to reset extra credit for the item
         if (!isset($this->gtree->parents[$itemid]->excredit)) {
 			if (!isset($this->gtree->parents[$itemid])) {
 				$this->gtree->parents[$itemid] = new stdClass;
 			}
 //			$this->gtree->parents[$itemid]->excredit = 0;
-		} 
-        
+		}
+
         // If this is a hidden grade category, hide it completely from the user
         if ($type == 'category' && $grade_object->is_hidden() && !$this->canviewhidden && (
                 $this->showhiddenitems == GRADE_REPORT_LAEUSER_HIDE_HIDDEN ||
@@ -403,10 +399,13 @@ class grade_report_laeuser extends grade_report {
                 $hidden = ' hidden';
             }
 
-            if ($type !== 'courseitem') {
-    			$parent_id = $this->gtree->parents[$itemid]->parent_id; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
+            if ($accuratetotals) {
+                $parent_id = $type !== 'courseitem' ? $this->gtree->parents[$itemid]->parent_id : $itemid; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
             }
-            
+//            if ($type !== 'courseitem') {
+//    			$parent_id = $this->gtree->parents[$itemid]->parent_id; // the parent record contains an id field pointing to its parent, the key on the parent record is the item itself to allow lookup
+//            }
+
 	        $hide = false;
             // If this is a hidden grade item, hide it completely from the user.
             if ($grade->is_hidden() && !$this->canviewhidden && (
@@ -457,7 +456,7 @@ class grade_report_laeuser extends grade_report {
 	        	if ($item->aggregationcoef > 0 && $this->gtree->parents[$item->id]->parent_agg != GRADE_AGGREGATE_WEIGHTED_MEAN2) {
 					$data['itemname']['content'] .= ' (Input weight = ' . format_float($item->aggregationcoef,2) . '%)';
 	        	}
-                
+
                 /// Actual Grade
                 $gradeval = $grade->finalgrade;
 
@@ -486,13 +485,13 @@ class grade_report_laeuser extends grade_report {
 						$data['weight']['content'] = number_format($grade_object->weight,2).'%';
                     }
                 }
-				
+
                 // if target grade mode change class and set flag
                 if (isset($this->gtree->items[$itemid]->target)) {
 					$class .= $targetclass;
                    	$targetcalcs = true; // switch for everything being treated as a calculated target grade
-                }	
-                
+                }
+
                 if ($this->showgrade) { // display only of points grade
                 	if ($grade->grade_item->needsupdate) {
                         $data['grade']['class'] = $class.' gradingerror';
@@ -506,9 +505,9 @@ class grade_report_laeuser extends grade_report {
                     } elseif ($grade->is_hidden()) {
                         $data['grade']['class'] = $class.' hidden';
                         $data['grade']['content'] = '-';
-                    } else if ($targetcalcs && $item->itemtype === 'category') {
+                    } else if ($targetcalcs && ($item->itemtype === 'category' || $item->itemtype === 'course')) {
                         $data['grade']['class'] = $class;
-						$grade_values = $this->gtree->parents[$itemid]->cat_item; // earned points
+						$grade_values = $grade->cat_item; // earned points
                         // $grade_values never gets created if $this->accuratetotals isn't on
                         if (sizeof($grade_values) !== 0) { // CATEGORY or COURSE item with values accumulated from its children
 							$gradeval = $this->gtree->accuratepointsfinalvalues($this->grades, $itemid, $grade->grade_item, $type, $parent_id, GRADE_DISPLAY_TYPE_REAL);
@@ -561,7 +560,7 @@ class grade_report_laeuser extends grade_report {
 					}
 					$grade->grade_item->grademax = 1;
 				}
-                                
+
                 // Percentage
                 if ($this->showpercentage) {
                     if ($grade->grade_item->needsupdate) {
@@ -570,7 +569,7 @@ class grade_report_laeuser extends grade_report {
                     } else if ($grade->is_hidden()) {
                         $data['percentage']['class'] = $class.' hidden';
                         $data['percentage']['content'] = '-';
-                    } elseif (isset($gradeval)) {
+                    } elseif (isset($gradeval) && isset($item->weight) && $item->weight !== 0) {
                         $data['percentage']['class'] = $class;
                     	$data['percentage']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_PERCENTAGE, 3);
                     } else {
@@ -594,10 +593,13 @@ class grade_report_laeuser extends grade_report {
                         }
                     } else if ($this->showlettergrade == GRADE_REPORT_LAEUSER_FINAL_GRADE_ONLY && $type !== 'courseitem') {
                         $data['lettergrade']['class'] = $class;
-                            $data['lettergrade']['content'] = '-';
-                    } else {
+                        $data['lettergrade']['content'] = '-';
+                    } elseif (isset($gradeval) && isset($item->weight) && $item->weight <> 0) {
                         $data['lettergrade']['class'] = $class;
                         $data['lettergrade']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_LETTER);
+                    } else {
+                        $data['lettergrade']['class'] = $class;
+                        $data['lettergrade']['content'] = '-';
                     }
                     $data['lettergrade']['headers'] = "$header_cat $header_row lettergrade";
                 }
@@ -646,15 +648,15 @@ class grade_report_laeuser extends grade_report {
                     $data['contrib']['class'] = $class;
                     if ($item->itemtype === 'course') {
 	                    $data['contrib']['content'] = format_float($gradeval * 100, 3);
+                    } else if ($item->itemtype === 'category') {
+                        $data['contrib']['content'] = '-';
+//                      $data['contrib']['content'] = format_float(array_sum($this->gtree->parents[$item->id]->cat_item) / $item->max_earnable * $this->gtree->items[$item->id]->weight,4);
                     } else if ($this->gtree->items[$item->id]->weight == 0 || in_array($item->id, $this->emptygrades)) {
 	                    $data['contrib']['content'] = '-';
                     } else if ($targetcalcs) {
                         $data['grade']['class'] = $class;
                     	$gradeval = $item->target;
 	                    $data['contrib']['content'] = format_float($gradeval / $item->grademax * $this->gtree->items[$item->id]->weight,3);
-                    } else if ($item->itemtype === 'category') {
-	                    $data['contrib']['content'] = '-';
-//	                    $data['contrib']['content'] = format_float(array_sum($this->gtree->parents[$item->id]->cat_item) / $item->max_earnable * $this->gtree->items[$item->id]->weight,4);
                     } else {
 	                    $data['contrib']['content'] = format_float($grade->finalgrade / $item->grademax * $this->gtree->items[$item->id]->weight,3);
                    	}
@@ -675,7 +677,7 @@ class grade_report_laeuser extends grade_report {
                     }
                     $data['feedback']['headers'] = "$header_cat $header_row feedback";
                 }
-	        } 
+	        }
         } else if ($type == 'category') {
             $data['leader']['class'] = $class.' '.$alter."d$depth b1t b2b b1l";
             $data['leader']['rowspan'] = $element['rowspan'];
@@ -714,7 +716,7 @@ class grade_report_laeuser extends grade_report {
      * @return string
      */
     public function print_table($return=false) {
-        global $CFG; 
+        global $CFG;
     	$maxspan = $this->maxdepth;
 
         /// Build table structure
@@ -936,7 +938,7 @@ class grade_report_laeuser extends grade_report {
             }
         }
     }
-    
+
     /**
      * get all the grades
      * pulls out all the grades, this does not need to worry about paging
@@ -944,7 +946,7 @@ class grade_report_laeuser extends grade_report {
     public function load_final_grades($userid) {
         global $CFG, $DB;
 		$courseid = $this->course->id;
-        
+
         if (!empty($this->grades)) {
             return;
         }
@@ -953,7 +955,7 @@ class grade_report_laeuser extends grade_report {
         $sql = "SELECT g.*
                   FROM {grade_items} gi,
                        {grade_grades} g
-                 WHERE g.itemid = gi.id 
+                 WHERE g.itemid = gi.id
                  AND g.userid = $userid
                  AND gi.courseid = $courseid";
 
@@ -975,54 +977,6 @@ class grade_report_laeuser extends grade_report {
                 $this->grades[$itemid]->grade_item = $this->gtree->get_item($itemid); // db caching
             }
         }
-    }
-
-    /*
-     * TODO: take into account hidden grades and setting of show totals excluding hidden items
-     * TODO: what are we going to do with categories and course total?
-     */
-    function grade_calculate_targets($target_letter = null) {
-    	// calculate up the contribution of grades already awarded
-		$contribution = 0;
-		$usedweights = 0;
-		$emptygrades = array();
-    	foreach ($this->gtree->items as $id => $item) {
-			if ($item->itemtype == 'category' || $item->itemtype === 'course') {
-				$emptygrades[$id] = $item;
-			} else {
-				$grade = grade_grade::fetch(array('itemid' => $item->id,'userid' => $this->user->id));
-				if (isset($grade->finalgrade)) {
-		    		$contribution += $item->weight * ($grade->finalgrade / $item->grademax);
-					$usedweights +=  $item->weight;
-				} else {
-					$emptygrades[$id] = $item;
-				}
-			}
-    	}
-    	
-		// how much potential grades are left to be earned
-    	$leftoverpotential = 100 - $usedweights;
-    	
-    	// set the maximum grade that can be achieved
-    	$this->maxtarget = $leftoverpotential + $contribution; 	
-
-    	// determine how much needs to be awarded to achieve target selected
-    	if (!is_null($target_letter)) {
-   	    	$tobegotten = $this->target_letter - $contribution;
-
-	    	// calculate up the multiplier for all weighted * grademaxes leftover
-	    	$gradescaler = $tobegotten / $leftoverpotential;
-	//    	$gradescaler = $leftoverpotential * $this->target_letter / 100;
-	    	
-	    	foreach ($emptygrades as $id => $item) {
-				if ($item->itemtype == 'category' || $item->itemtype === 'course') {
-//	    			$this->gtree->items[$id]->target = $item->max_earnable * $gradescaler;
-				} else {
-	    			$this->gtree->items[$id]->target = $item->grademax * $gradescaler;				
-				}
-	    	}
-    	}
-    	
     }
 }
 
@@ -1103,7 +1057,7 @@ function grade_report_laeuser_settings_definition(&$mform) {
                       0 => get_string('hide'),
                       1 => get_string('show'),
                       2 => get_string('finalgradeonly', 'gradereport_laeuser'));
-    
+
     if (empty($CFG->grade_report_laeuser_showlettergrade)) {
         $options[-1] = get_string('defaultprev', 'grades', $options[0]);
     } else {
@@ -1113,7 +1067,7 @@ function grade_report_laeuser_settings_definition(&$mform) {
     $mform->addElement('select', 'report_laeuser_showlettergrade', get_string('showlettergrade', 'grades'), $options);
 
     $mform->addElement('select', 'report_laeuser_showcontrib', get_string('showcontrib', 'gradereport_laeuser'), $options);
-    
+
     $options = array(0=>0, 1=>1, 2=>2, 3=>3, 4=>4, 5=>5);
     if (! empty($CFG->grade_report_laeuser_rangedecimals)) {
         $options[-1] = $options[$CFG->grade_report_laeuser_rangedecimals];

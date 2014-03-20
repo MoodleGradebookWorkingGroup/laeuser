@@ -42,7 +42,7 @@ class gradereport_laeuser_renderer extends plugin_renderer_base {
 
         return $output;
     }
-    
+
     public function target_grades_selector($report, $course, $userid, $context, $maxpercentage, $target_letter) {
         global $USER;
 
@@ -50,7 +50,7 @@ class gradereport_laeuser_renderer extends plugin_renderer_base {
        		$target_letter = null;
        	}
         $letters = grade_get_letters($context);
-       	
+
        	// cycle through letters and remove any that are greater than maxpercentage
        	foreach ($letters as $key => $value) {
        		if ($key > $maxpercentage) {
@@ -63,5 +63,5 @@ class gradereport_laeuser_renderer extends plugin_renderer_base {
 
         return $output;
     }
-    
+
 }
