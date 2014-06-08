@@ -619,11 +619,14 @@ class grade_report_laeuser extends grade_report {
                         $data['percentage']['class'] = $class.' hidden';
                         $data['percentage']['content'] = '-';
                     } else if ($type == 'categoryitem') {
-                    	if (isset($this->grades[$itemid]->pctg)) {
-                    		$gradeval = array_sum($this->grades[$itemid]->pctg) * $grade->grade_item->grademax * .01;
-                    	}
                     	$data['percentage']['class'] = $class;
-						$data['percentage']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_PERCENTAGE, 3);
+                    	if (isset($this->grades[$itemid]->pctg) && sizeof($this->grades[$itemid]->pctg) > 0) {
+                    		$gradeval = array_sum($this->grades[$itemid]->pctg) * $grade->grade_item->grademax * .01;
+							$data['percentage']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_PERCENTAGE, 3);
+                    	} else {
+                    		unset($gradeval);
+                        	$data['percentage']['content'] = '-';
+                    	}
                     } else if ($type == 'courseitem') {
                     	if (isset($this->grades[$itemid]->contrib)) {
                     		$gradeval = array_sum($this->grades[$itemid]->contrib) * $grade->grade_item->grademax;
@@ -714,12 +717,13 @@ class grade_report_laeuser extends grade_report {
                     $data['contrib']['class'] = $class;
                     if ($item->itemtype === 'course') {
 	                    $data['contrib']['content'] = grade_format_gradevalue($gradeval, $grade->grade_item, true, GRADE_DISPLAY_TYPE_PERCENTAGE, 3);
-//                    } else if ($item->itemtype === 'category') {
-//                        $data['contrib']['content'] = '-';
-//                      $data['contrib']['content'] = format_float(array_sum($this->gtree->parents[$item->id]->cat_item) / $item->max_earnable * $this->gtree->items[$item->id]->weight,4);
-                    } else if (!isset($grade->weight)) {
+                    } else if (!isset($grade->weight) || $grade->weight == 0) {
 	                    $data['contrib']['content'] = '-';
-                    } else if ($grade->weight == 0 || in_array($item->id, $this->emptygrades)) {
+                    } else if (!isset($grade->grade_item->grademax) || $grade->grade_item->grademax == 0) {
+	                    $data['contrib']['content'] = '-';
+                    } else if (!isset($this->grades[$parent_id]->weight) || $this->grades[$parent_id]->weight == 0) {
+	                    $data['contrib']['content'] = '-';
+                    } else if (in_array($item->id, $this->emptygrades)) {
 	                    $data['contrib']['content'] = '-';
                     } else if ($grade->weight == -1) {
                         $data['contrib']['content'] = '-';
