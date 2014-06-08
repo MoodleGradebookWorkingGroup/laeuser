@@ -26,6 +26,7 @@ require_once '../../../config.php';
 require_once $CFG->libdir.'/gradelib.php';
 require_once $CFG->dirroot.'/grade/lib.php';
 require_once $CFG->dirroot.'/grade/report/laeuser/lib.php';
+require_once $CFG->dirroot.'/grade/report/laegrader/locallib.php';
 
 $courseid = required_param('id', PARAM_INT);
 $userid   = optional_param('userid', $USER->id, PARAM_INT);
@@ -81,8 +82,13 @@ if (!isset($USER->grade_last_report)) {
 $USER->grade_last_report[$course->id] = 'laeuser';
 
 
-//first make sure we have proper final grades - this must be done before constructing of the grade tree
-grade_regrade_final_grades($courseid);
+$sumofgradesonly = sumofgradesonly($courseid);
+//first make sure we have proper final grades - we need it for locking changes
+// get the grading tree object
+// note: total must be first for moving to work correctly, if you want it last moving code must be rewritten!
+if (!$sumofgradesonly) {
+	grade_regrade_final_grades($courseid);
+}
 
 if (has_capability('moodle/grade:viewall', $context)) { //Teachers will see all student reports
     $groupmode    = groups_get_course_groupmode($course);   // Groups are being used
